@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Advanced Lighting Control</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    body {
+        background: #111;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+    }
+    h1 { margin-bottom: 20px; }
+
+    .btn {
+        width: 80%;
+        padding: 18px;
+        margin: 10px 0;
+        font-size: 22px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+    .go { background: #28a745; }
+    .stop { background: #dc3545; }
+    .fx { background: #007bff; }
+
+    .section {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #444;
+    }
+
+    #joystick {
+        width: 200px;
+        height: 200px;
+        background: #222;
+        border-radius: 50%;
+        margin: 20px auto;
+        position: relative;
+        touch-action: none;
+    }
+    #stick {
+        width: 60px;
+        height: 60px;
+        background: #555;
+        border-radius: 50%;
+        position: absolute;
+        top: 70px;
+        left: 70px;
+    }
+</style>
+
+<script>
+function send(cmd) {
+    fetch("/cmd?button=" + cmd)
+        .then(r => console.log("Sent:", cmd))
+        .catch(e => console.log("Error:", e));
+}
+
+// Colour override for ALL fixtures
+function sendColourAll() {
+    let c = document.getElementById("allColour").value;
+    send("ALLCOLOR_" + c.substring(1));
+}
+
+// PAR-only colour
+function sendColourPAR() {
+    let c = document.getElementById("parColour").value;
+    send("PARCOLOR_" + c.substring(1));
+}
+
+// Moving Head-only colour
+function sendColourMH() {
+    let c = document.getElementById("mhColour").value;
+    send("MHCOLOR_" + c.substring(1));
+}
+
+// Joystick control
+let stick, joy;
+window.onload = () => {
+    joy = document.getElementById("joystick");
+    stick = document.getElementById("stick");
+
+    joy.addEventListener("touchmove", handleJoy);
+    joy.addEventListener("touchend", resetJoy);
+};
+
+function handleJoy(ev) {
+    ev.preventDefault();
+    let rect = joy.getBoundingClientRect();
+    let x = ev.touches[0].clientX - rect.left - 100;
+    let y = ev.touches[0].clientY - rect.top - 100;
+
+    let limit = 70;
+    let dx = Math.max(-limit, Math.min(limit, x));
+    let dy = Math.max(-limit, Math.min(limit, y));
+
+    stick.style.left = (dx + 100 - 30) + "px";
+    stick.style.top = (dy + 100 - 30) + "px";
+
+    let pan = Math.round((dx / limit) * 100);
+    let tilt = Math.round((dy / limit) * 100);
+
+    send("PT_" + pan + "_" + tilt);
+}
+
+function resetJoy() {
+    stick.style.left = "70px";
+    stick.style.top = "70px";
+    send("PT_0_0");
+}
+</script>
+
+</head>
+<body>
+
+<h1>Advanced Lighting Control</h1>
+
+<!-- BASIC FOOTPEDAL BUTTONS -->
+<button class="btn go" onclick="send('GO')">GO</button>
+<button class="btn stop" onclick="send('STOP')">STOP</button>
+<button class="btn fx" onclick="send('FX1')">Effect 1</button>
+<button class="btn fx" onclick="send('FX2')">Effect 2</button>
+
+<!-- COLOUR OVERRIDES -->
+<div class="section">
+    <h2>Colour Override (All Fixtures)</h2>
+    <input type="color" id="allColour" value="#ffffff" style="width:80%; height:60px;">
+    <button class="btn fx" onclick="sendColourAll()">Set All Lights</button>
+</div>
+
+<div class="section">
+    <h2>PAR Colour</h2>
+    <input type="color" id="parColour" value="#ff0000" style="width:80%; height:60px;">
+    <button class="btn fx" onclick="sendColourPAR()">Set PARs</button>
+</div>
+
+<div class="section">
+    <h2>Moving Head Colour</h2>
+    <input type="color" id="mhColour" value="#0000ff" style="width:80%; height:60px;">
+    <button class="btn fx" onclick="sendColourMH()">Set Moving Heads</button>
+</div>
+
+<!-- JOYSTICK -->
+<div class="section">
+    <h2>Moving Head Pan / Tilt</h2>
+    <div id="joystick">
+        <div id="stick"></div>
+    </div>
+</div>
+
+</body>
+</html>
